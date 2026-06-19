@@ -1,0 +1,34 @@
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; padding:0; background:#0b0d12; }
+  body { overscroll-behavior-y: none; }
+  select { font-family: inherit; }
+  ::-webkit-scrollbar { display: none; }
+
+  /* ─── Animations ─────────────────────────────────────────────── */
+  @keyframes fadeIn      { from{opacity:0} to{opacity:1} }
+  @keyframes fadeSlideUp { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
+  @keyframes sheetUp     { from{opacity:0; transform:translateY(28px)} to{opacity:1; transform:translateY(0)} }
+  @keyframes scaleIn     { from{opacity:0; transform:scale(0.92)} to{opacity:1; transform:scale(1)} }
+  @keyframes popIn       { 0%{transform:scale(0.6); opacity:0.4} 60%{transform:scale(1.18)} 100%{transform:scale(1); opacity:1} }
+  @keyframes expandOpen  { from{opacity:0; transform:scaleY(0.92); transform-origin:top} to{opacity:1; transform:scaleY(1)} }
+  @keyframes growBar     { from{ transform:scaleX(0); } to{ transform:scaleX(1); } }
+  @keyframes growBarV    { from{ transform:scaleY(0); } to{ transform:scaleY(1); } }
+  @keyframes spin        { to{ transform:rotate(360deg); } }
+
+  .anim-fade        { animation: fadeIn 0.35s ease both; }
+  .anim-slide       { animation: fadeSlideUp 0.35s cubic-bezier(.2,.8,.2,1) both; }
+  .anim-sheet       { animation: sheetUp 0.28s cubic-bezier(.2,.8,.2,1) both; }
+  .anim-scale       { animation: scaleIn 0.2s cubic-bezier(.2,.8,.2,1) both; }
+  .anim-pop         { animation: popIn 0.32s cubic-bezier(.34,1.56,.64,1) both; }
+  .anim-expand      { animation: expandOpen 0.22s cubic-bezier(.2,.8,.2,1) both; }
+  .anim-spin        { animation: spin 0.7s linear infinite; }
+  .bar-grow         { transform-origin: left center; animation: growBar 0.6s cubic-bezier(.2,.8,.2,1) both; }
+  .bar-grow-v       { transform-origin: bottom center; animation: growBarV 0.5s cubic-bezier(.2,.8,.2,1) both; }
+
+  .tap { transition: transform 0.12s ease, opacity 0.12s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease; }
+  .tap:active { transform: scale(0.96); opacity: 0.85; }
+
+  .row-hover { transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease; }
+  .row-hover:active { transform: scale(0.992); }
+
+  .chev { transition: transform 0.22s cubic-bezier(.2,.8,.2,1); }
