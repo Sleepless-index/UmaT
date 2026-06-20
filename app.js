@@ -299,9 +299,8 @@ function UmaAvatar({ name, type, size = 28 }) {
         height: size,
         borderRadius,
         objectFit: "cover",
-        objectPosition: "center 20%",
+        objectPosition: "center",
         flexShrink: 0,
-        border: `1.5px solid ${tc}55`,
         background: C.faint,
         display: "block"
       }
@@ -681,7 +680,7 @@ function StandingsTab({
     })), /*#__PURE__*/React.createElement(UmaAvatar, {
       name: s.name,
       type: s.type,
-      size: 34
+      size: 42
     }), /*#__PURE__*/React.createElement("div", {
       style: {
         flex: 1,
@@ -890,7 +889,7 @@ function TrendsTab({
     }, /*#__PURE__*/React.createElement(UmaAvatar, {
       name: name,
       type: s.type,
-      size: 32
+      size: 40
     }), /*#__PURE__*/React.createElement("span", {
       style: {
         fontWeight: 800,
@@ -1918,7 +1917,7 @@ function RaceViewModal({
     })), /*#__PURE__*/React.createElement(UmaAvatar, {
       name: e.name,
       type: e.type,
-      size: 32
+      size: 40
     }), /*#__PURE__*/React.createElement("div", {
       style: {
         flex: 1,
@@ -2654,7 +2653,7 @@ Long`), /*#__PURE__*/React.createElement("div", {
     }, i + 1), /*#__PURE__*/React.createElement(UmaAvatar, {
       name: e.name,
       type: e.type,
-      size: 26
+      size: 34
     }), /*#__PURE__*/React.createElement("span", {
       style: {
         flex: 1,
@@ -3076,7 +3075,7 @@ function RaceFormModal({
   }), " Loss")))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "26px 28px 1fr 92px 66px",
+      gridTemplateColumns: "26px 34px 1fr 92px 66px",
       gap: "4px 6px",
       fontSize: 9,
       color: C.muted,
@@ -3103,7 +3102,7 @@ function RaceFormModal({
       key: i,
       style: {
         display: "grid",
-        gridTemplateColumns: "26px 28px 1fr 92px 66px",
+        gridTemplateColumns: "26px 34px 1fr 92px 66px",
         gap: "0 6px",
         alignItems: "center"
       }
@@ -3112,7 +3111,7 @@ function RaceFormModal({
     }), /*#__PURE__*/React.createElement(UmaAvatar, {
       name: row.name || `Uma ${i + 1}`,
       type: row.type,
-      size: 26
+      size: 34
     }), /*#__PURE__*/React.createElement("input", {
       value: row.name,
       onChange: e => updateRow(i, "name", e.target.value),
