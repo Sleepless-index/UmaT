@@ -291,7 +291,7 @@ function UmaAvatar({ name, type, size = 28 }) {
 
   if (!err) {
     return /*#__PURE__*/React.createElement("img", {
-      src: `icons/${slug}.webp`,
+      src: `icons/webp/${slug}.webp`,
       alt: name,
       onError: () => setErr(true),
       style: {
@@ -299,7 +299,7 @@ function UmaAvatar({ name, type, size = 28 }) {
         height: size,
         borderRadius,
         objectFit: "cover",
-        objectPosition: "top center",
+        objectPosition: "center 20%",
         flexShrink: 0,
         border: `1.5px solid ${tc}55`,
         background: C.faint,
