@@ -261,6 +261,9 @@ function Icon({
 
 
 // ─── Uma Avatar ──────────────────────────────────────────────────────────────
+// Global roster override map — set by App, read by UmaAvatar without prop drilling
+const _rosterRef = { current: {} };
+function setGlobalRoster(r) { _rosterRef.current = r; }
 // Name format: "T.M. Opera O" (base) or "T.M. Opera O [New Year, Same Radiance!]" (alt)
 // Slug: strip punctuation except spaces/brackets, split on bracket, join with "_".
 // T.M. Opera O                        → TM_Opera_O.webp
@@ -284,7 +287,7 @@ function umaSlug(name) {
 
 function UmaAvatar({ name, type, size = 28 }) {
   const [err, setErr] = useState(false);
-  const slug = umaSlug(name);
+  const slug = _rosterRef.current[name] || umaSlug(name);
   const tc = TYPE_COLOR[type] || C.accent;
   const initial = name.trim()[0]?.toUpperCase() || '?';
   const borderRadius = Math.round(size * 0.28);
@@ -986,8 +989,9 @@ function TrendsTab({
         marginTop: 4
       }
     }, races.map((_, i) => {
-      const skip = races.length > 20 ? 5 : races.length > 10 ? 2 : 1;
-      const show = i === 0 || i === races.length - 1 || (i + 1) % skip === 0;
+      const n = races.length;
+      const skip = n > 20 ? 5 : n > 10 ? 2 : 1;
+      const show = i === 0 || i === n - 1 || (i + 1) % skip === 0;
       return /*#__PURE__*/React.createElement("div", {
         key: i,
         style: {
@@ -995,9 +999,10 @@ function TrendsTab({
           textAlign: "center",
           fontSize: 8,
           color: show ? C.muted : "transparent",
+          whiteSpace: "nowrap",
           overflow: "hidden"
         }
-      }, "R", i + 1);
+      }, `R${i + 1}`);
     })), /*#__PURE__*/React.createElement("div", {
       style: {
         display: "grid",
@@ -1033,49 +1038,50 @@ const RACES_PAGE_SIZE = 20;
 function SwipeableRaceRow({ race, index, onView, onEdit, onDelete, editMode }) {
   const [swipeX, setSwipeX] = useState(0);
   const [swiping, setSwiping] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
   const startX = React.useRef(null);
-  const DELETE_THRESHOLD = 80;
+  const startY = React.useRef(null);
+  const locked = React.useRef(null); // "h" | "v" | null
+  const SNAP_THRESHOLD = 60;
   const isWin = race.outcome !== "loss";
   const totalPts = race.results.reduce((s, e) => s + e.pts, 0);
+  const swiped = swipeX < -SNAP_THRESHOLD;
 
   function onTouchStart(e) {
     startX.current = e.touches[0].clientX;
-    setSwiping(true);
-    setConfirmed(false);
+    startY.current = e.touches[0].clientY;
+    locked.current = null;
   }
   function onTouchMove(e) {
     if (startX.current === null) return;
     const dx = e.touches[0].clientX - startX.current;
-    if (dx > 0) { setSwipeX(0); return; } // block right swipe
-    setSwipeX(Math.max(dx, -120));
+    const dy = e.touches[0].clientY - startY.current;
+    // Lock scroll direction after 6px
+    if (!locked.current) {
+      if (Math.abs(dx) > Math.abs(dy) + 4) locked.current = "h";
+      else if (Math.abs(dy) > Math.abs(dx) + 4) locked.current = "v";
+      else return;
+    }
+    if (locked.current === "v") return;
+    if (dx > 0) { setSwipeX(0); return; }
+    e.preventDefault();
+    setSwiping(true);
+    setSwipeX(Math.max(dx, -110));
   }
   function onTouchEnd() {
     setSwiping(false);
-    if (swipeX <= -DELETE_THRESHOLD) {
-      setSwipeX(-88); // snap open to reveal button
+    if (swipeX <= -SNAP_THRESHOLD) {
+      setSwipeX(-88);
     } else {
       setSwipeX(0);
     }
     startX.current = null;
   }
-  function handleDelete() {
-    if (confirmed) {
-      onDelete(race.id);
-    } else {
-      setConfirmed(true);
-    }
-  }
-  function closeSwipe() {
-    setSwipeX(0);
-    setConfirmed(false);
-  }
 
   return /*#__PURE__*/React.createElement("div", {
-    style: { position: "relative", borderRadius: 11, overflow: "hidden" }
+    style: { position: "relative", borderRadius: 11 }
   },
-  // Delete button behind the row
-  /*#__PURE__*/React.createElement("div", {
+  // Delete button revealed behind
+  swipeX < -20 && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "absolute",
       right: 0, top: 0, bottom: 0,
@@ -1083,26 +1089,19 @@ function SwipeableRaceRow({ race, index, onView, onEdit, onDelete, editMode }) {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      background: confirmed ? "#ef4444" : "#ef444422",
+      background: "#ef444433",
       borderRadius: 11,
-      transition: "background 0.15s"
+      border: "1px solid #ef444466"
     }
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: handleDelete,
+    onClick: () => onDelete(race.id),
     style: {
-      background: "transparent",
-      border: "none",
-      color: confirmed ? "#fff" : "#ef4444",
-      cursor: "pointer",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: 4,
-      fontSize: 10,
-      fontWeight: 800
+      background: "transparent", border: "none",
+      color: "#ef4444", cursor: "pointer",
+      display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+      fontSize: 10, fontWeight: 800
     }
-  }, /*#__PURE__*/React.createElement(Icon, { name: "trash", size: 18, color: confirmed ? "#fff" : "#ef4444" }),
-     confirmed ? "Sure?" : "Delete")),
+  }, /*#__PURE__*/React.createElement(Icon, { name: "trash", size: 18, color: "#ef4444" }), "Delete")),
   // Row itself
   /*#__PURE__*/React.createElement("div", {
     className: "anim-slide",
@@ -1112,7 +1111,7 @@ function SwipeableRaceRow({ race, index, onView, onEdit, onDelete, editMode }) {
     style: {
       animationDelay: `${Math.min(index, 10) * 30}ms`,
       background: C.card,
-      border: `1px solid ${swipeX < -20 ? "#ef444444" : C.border}`,
+      border: `1px solid ${swiped ? "#ef4444aa" : swipeX < -20 ? "#ef444455" : C.border}`,
       borderRadius: 11,
       padding: "13px 14px",
       display: "flex",
@@ -1121,12 +1120,12 @@ function SwipeableRaceRow({ race, index, onView, onEdit, onDelete, editMode }) {
       transform: `translateX(${swipeX}px)`,
       transition: swiping ? "none" : "transform 0.25s cubic-bezier(.2,.8,.2,1), border-color 0.15s",
       position: "relative",
-      zIndex: 1
+      zIndex: 1,
+      touchAction: "pan-y"
     }
   },
-  // tap-away to close swipe
   swipeX < 0 && /*#__PURE__*/React.createElement("div", {
-    onClick: closeSwipe,
+    onClick: () => setSwipeX(0),
     style: { position: "fixed", inset: 0, zIndex: 0 }
   }),
   /*#__PURE__*/React.createElement("div", {
@@ -1141,9 +1140,7 @@ function SwipeableRaceRow({ race, index, onView, onEdit, onDelete, editMode }) {
     /*#__PURE__*/React.createElement("div", {
       style: { display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }
     },
-      /*#__PURE__*/React.createElement("span", {
-        style: { fontWeight: 800, color: C.text, fontSize: 14 }
-      }, race.label),
+      /*#__PURE__*/React.createElement("span", { style: { fontWeight: 800, color: C.text, fontSize: 14 } }, race.label),
       /*#__PURE__*/React.createElement("span", {
         style: {
           fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 5,
@@ -1163,9 +1160,7 @@ function SwipeableRaceRow({ race, index, onView, onEdit, onDelete, editMode }) {
     )
   ),
   /*#__PURE__*/React.createElement("button", {
-    onClick: () => onView(race),
-    title: "View",
-    className: "tap",
+    onClick: () => onView(race), title: "View", className: "tap",
     style: {
       background: C.faint, border: `1px solid ${C.border2}`, color: C.muted,
       width: 32, height: 32, borderRadius: 7, cursor: "pointer",
@@ -1173,9 +1168,7 @@ function SwipeableRaceRow({ race, index, onView, onEdit, onDelete, editMode }) {
     }
   }, /*#__PURE__*/React.createElement(Icon, { name: "eye", size: 14 })),
   editMode && /*#__PURE__*/React.createElement("button", {
-    onClick: () => onEdit(race),
-    title: "Edit",
-    className: "tap",
+    onClick: () => onEdit(race), title: "Edit", className: "tap",
     style: {
       background: C.faint, border: `1px solid ${C.border2}`, color: C.accent,
       width: 32, height: 32, borderRadius: 7, cursor: "pointer",
@@ -3390,9 +3383,149 @@ function SettingsModal({
   }), " Clear All Data")))))));
 }
 
+// ─── Tab: Roster ─────────────────────────────────────────────────────────────
+function RosterTab({ existingNames, existingTypes, roster, onRosterChange }) {
+  const [editing, setEditing] = useState(null); // { name, slug }
+  const [inputVal, setInputVal] = useState("");
+
+  const umas = existingNames.map(name => ({
+    name,
+    type: existingTypes[name] || "Mile",
+    slug: roster[name] || umaSlug(name)
+  }));
+
+  function openEdit(uma) {
+    setEditing(uma);
+    setInputVal(roster[uma.name] || umaSlug(uma.name));
+  }
+  function saveEdit() {
+    const trimmed = inputVal.trim();
+    if (!trimmed) return;
+    onRosterChange({ ...roster, [editing.name]: trimmed });
+    setEditing(null);
+  }
+
+  if (umas.length === 0) {
+    return /*#__PURE__*/React.createElement("div", {
+      style: { textAlign: "center", padding: "64px 20px" }
+    },
+      /*#__PURE__*/React.createElement("div", {
+        style: { display: "flex", justifyContent: "center", marginBottom: 12, color: C.border2 }
+      }, /*#__PURE__*/React.createElement(Icon, { name: "user", size: 44, strokeWidth: 1.5 })),
+      /*#__PURE__*/React.createElement("div", { style: { fontWeight: 700, color: C.muted, fontSize: 15 } }, "No umas yet"),
+      /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 4 } }, "Add races to see your roster")
+    );
+  }
+
+  return /*#__PURE__*/React.createElement("div", null,
+    /*#__PURE__*/React.createElement("div", {
+      style: { fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.5 }
+    }, "Icons load from ", /*#__PURE__*/React.createElement("code", { style: { color: C.accent, fontSize: 11 } }, "icons/<slug>.webp"),
+    ". Tap any row to override the slug for that uma."),
+    /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } },
+      umas.map(uma => /*#__PURE__*/React.createElement("div", {
+        key: uma.name,
+        className: "anim-slide row-hover",
+        style: {
+          background: C.card, border: `1px solid ${C.border}`,
+          borderRadius: 11, padding: "12px 14px",
+          display: "flex", alignItems: "center", gap: 12
+        }
+      },
+        /*#__PURE__*/React.createElement(UmaAvatar, { name: uma.name, type: uma.type, size: 44 }),
+        /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+          /*#__PURE__*/React.createElement("div", {
+            style: { fontWeight: 800, fontSize: 14, color: C.text, marginBottom: 2,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }
+          }, uma.name),
+          /*#__PURE__*/React.createElement("div", {
+            style: { fontSize: 11, color: C.muted, fontFamily: "monospace",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }
+          }, uma.slug, ".webp")
+        ),
+        /*#__PURE__*/React.createElement(Pill, { type: uma.type }),
+        /*#__PURE__*/React.createElement("button", {
+          onClick: () => openEdit(uma), className: "tap",
+          style: {
+            background: C.faint, border: `1px solid ${C.border2}`, color: C.accent,
+            width: 32, height: 32, borderRadius: 7, cursor: "pointer",
+            flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center"
+          }
+        }, /*#__PURE__*/React.createElement(Icon, { name: "pencil", size: 14 }))
+      ))
+    ),
+    // Edit slug modal
+    editing && /*#__PURE__*/React.createElement("div", {
+      className: "anim-fade",
+      style: { position: "fixed", inset: 0, background: "#000b", zIndex: 100,
+        display: "flex", flexDirection: "column", justifyContent: "flex-end" },
+      onClick: () => setEditing(null)
+    },
+      /*#__PURE__*/React.createElement("div", {
+        onClick: e => e.stopPropagation(),
+        className: "anim-sheet",
+        style: {
+          background: C.surface, borderRadius: "18px 18px 0 0",
+          border: `1px solid ${C.border}`, padding: 20,
+          paddingBottom: `calc(20px + env(safe-area-inset-bottom))`
+        }
+      },
+        /*#__PURE__*/React.createElement("div", {
+          style: { display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }
+        },
+          /*#__PURE__*/React.createElement(UmaAvatar, { name: editing.name, type: editing.type, size: 44 }),
+          /*#__PURE__*/React.createElement("div", null,
+            /*#__PURE__*/React.createElement("div", { style: { fontWeight: 800, fontSize: 15, color: C.text } }, editing.name),
+            /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 2 } }, "Override icon filename (without .webp)")
+          )
+        ),
+        /*#__PURE__*/React.createElement("div", { style: { marginBottom: 6, fontSize: 11, color: C.muted } }, "Filename slug"),
+        /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center" } },
+          /*#__PURE__*/React.createElement("input", {
+            value: inputVal,
+            onChange: e => setInputVal(e.target.value),
+            onKeyDown: e => e.key === "Enter" && saveEdit(),
+            placeholder: umaSlug(editing.name),
+            autoFocus: true,
+            style: {
+              flex: 1, background: C.card, border: `1px solid ${C.border2}`,
+              borderRadius: 9, padding: "10px 12px", color: C.text,
+              fontSize: 13, fontFamily: "monospace", outline: "none"
+            }
+          }),
+          /*#__PURE__*/React.createElement("span", { style: { color: C.muted, fontSize: 13 } }, ".webp")
+        ),
+        /*#__PURE__*/React.createElement("div", {
+          style: { fontSize: 11, color: C.muted, marginTop: 8, marginBottom: 20 }
+        }, "Preview path: ", /*#__PURE__*/React.createElement("code", { style: { color: C.accent } }, `icons/${inputVal || umaSlug(editing.name)}.webp`)),
+        /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8 } },
+          /*#__PURE__*/React.createElement("button", {
+            onClick: () => { onRosterChange({ ...roster, [editing.name]: umaSlug(editing.name) }); setEditing(null); },
+            className: "tap",
+            style: {
+              flex: 1, padding: "12px", borderRadius: 11, cursor: "pointer",
+              background: C.faint, border: `1px solid ${C.border2}`,
+              color: C.muted, fontWeight: 700, fontSize: 13
+            }
+          }, "Reset to default"),
+          /*#__PURE__*/React.createElement("button", {
+            onClick: saveEdit, className: "tap",
+            style: {
+              flex: 1, padding: "12px", borderRadius: 11, cursor: "pointer",
+              background: C.accent, border: "none",
+              color: "#fff", fontWeight: 700, fontSize: 13
+            }
+          }, "Save")
+        )
+      )
+    )
+  );
+}
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 const STORAGE_KEY = "uma_race_v2";
 const CLASS_KEY = "uma_trial_class_v1";
+const ROSTER_KEY = "uma_roster_v1";
 function App() {
   const [races, setRaces] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -3403,6 +3536,7 @@ function App() {
   const [viewRace, setViewRace] = useState(null);
   const [editingRace, setEditingRace] = useState(null);
   const [trialClass, setTrialClassState] = useState(3);
+  const [roster, setRosterState] = useState({});
 
   // Load persisted data once on mount
   useEffect(() => {
@@ -3420,13 +3554,26 @@ function App() {
         if (n >= 1 && n <= 6) setTrialClassState(n);
       }
     } catch {}
+    try {
+      const raw = localStorage.getItem(ROSTER_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          setRosterState(parsed);
+          setGlobalRoster(parsed);
+        }
+      }
+    } catch {}
     setLoaded(true);
   }, []);
   function setTrialClass(n) {
     setTrialClassState(n);
-    try {
-      localStorage.setItem(CLASS_KEY, String(n));
-    } catch {}
+    try { localStorage.setItem(CLASS_KEY, String(n)); } catch {}
+  }
+  function setRoster(r) {
+    setRosterState(r);
+    setGlobalRoster(r);
+    try { localStorage.setItem(ROSTER_KEY, JSON.stringify(r)); } catch {}
   }
 
   // Persist on change (skip the very first render before load completes)
@@ -3529,9 +3676,13 @@ function App() {
     label: "Races",
     icon: "flag"
   }, {
+    id: "roster",
+    label: "Roster",
+    icon: "user"
+  }, {
     id: "profile",
     label: "Profile",
-    icon: "user"
+    icon: "settings"
   }];
   const mid = Math.ceil(TABS.length / 2);
   const leftTabs = TABS.slice(0, mid);
@@ -3634,7 +3785,7 @@ function App() {
       padding: "16px 16px 100px",
       WebkitOverflowScrolling: "touch"
     }
-  }, races.length === 0 && tab !== "races" && tab !== "profile" ? /*#__PURE__*/React.createElement("div", {
+  }, races.length === 0 && tab !== "races" && tab !== "profile" && tab !== "roster" ? /*#__PURE__*/React.createElement("div", {
     className: "anim-slide",
     style: {
       textAlign: "center",
@@ -3694,6 +3845,11 @@ function App() {
     onDelete: deleteRace,
     onView: setViewRace,
     onEdit: openEdit
+  }), tab === "roster" && /*#__PURE__*/React.createElement(RosterTab, {
+    existingNames: existingNames,
+    existingTypes: existingTypes,
+    roster: roster,
+    onRosterChange: setRoster
   }), tab === "profile" && /*#__PURE__*/React.createElement(ProfileTab, {
     races: races,
     stats: stats,
