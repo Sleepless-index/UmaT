@@ -162,6 +162,9 @@ const ICONS = {
   }), /*#__PURE__*/React.createElement("path", {
     d: "m19 12-7 7-7-7"
   })),
+  minus: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("path", {
+    d: "M5 12h14"
+  })),
   target: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
     cx: "12",
     cy: "12",
@@ -357,6 +360,33 @@ function stddev(vals) {
   const m = vals.reduce((a, b) => a + b, 0) / vals.length;
   return Math.sqrt(vals.reduce((s, v) => s + (v - m) ** 2, 0) / vals.length);
 }
+
+// Momentum: ordinary-least-squares slope of points-per-race over a
+// character's most recent races (chronological order, oldest→newest as
+// passed in). Returns null if there's not enough data for a meaningful
+// trend (fewer than 3 races). The slope is also expressed as a % of the
+// character's average score per race, so characters on very different
+// point scales (e.g. Dirt vs Mile) are comparable on the same badge scale.
+const MOMENTUM_WINDOW = 8;
+const MOMENTUM_MIN_RACES = 3;
+function computeMomentum(scoresChronological) {
+  const window = scoresChronological.slice(-MOMENTUM_WINDOW);
+  const n = window.length;
+  if (n < MOMENTUM_MIN_RACES) return null;
+
+  const xs = window.map((_, i) => i);
+  const xMean = xs.reduce((a, b) => a + b, 0) / n;
+  const yMean = window.reduce((a, b) => a + b, 0) / n;
+  let num = 0, den = 0;
+  for (let i = 0; i < n; i++) {
+    num += (xs[i] - xMean) * (window[i] - yMean);
+    den += (xs[i] - xMean) ** 2;
+  }
+  const slope = den === 0 ? 0 : num / den; // pts change per race
+  const pctPerRace = yMean > 0 ? (slope / yMean) * 100 : 0;
+  return { slope, pctPerRace, racesUsed: n };
+}
+
 function computeStats(races) {
   const map = {};
   races.forEach(race => {
@@ -421,6 +451,42 @@ function Pill({
       whiteSpace: "nowrap"
     }
   }, type);
+}
+// Momentum badge: shows whether a character's recent scores are trending
+// up, down, or flat, based on the linear-regression slope from
+// computeMomentum(). Renders nothing if there isn't enough race history
+// yet for a meaningful trend.
+const MOMENTUM_FLAT_THRESHOLD = 2; // % per race; below this magnitude counts as flat
+function MomentumBadge({ momentum }) {
+  if (!momentum) return null;
+  const { pctPerRace } = momentum;
+  let dir, color, label;
+  if (pctPerRace > MOMENTUM_FLAT_THRESHOLD) {
+    dir = "arrowUp"; color = "#34d399"; label = "Rising";
+  } else if (pctPerRace < -MOMENTUM_FLAT_THRESHOLD) {
+    dir = "arrowDown"; color = "#f87171"; label = "Falling";
+  } else {
+    dir = "minus"; color = C.muted; label = "Flat";
+  }
+  const sign = pctPerRace > 0 ? "+" : "";
+  return /*#__PURE__*/React.createElement("span", {
+    title: `${label}: ${sign}${pctPerRace.toFixed(1)}% per race over last ${momentum.racesUsed} races`,
+    style: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 3,
+      background: color + "1a",
+      color,
+      border: `1px solid ${color}44`,
+      borderRadius: 5,
+      padding: "2px 6px 2px 5px",
+      fontSize: 9.5,
+      fontWeight: 800,
+      letterSpacing: "0.02em",
+      whiteSpace: "nowrap"
+    }
+  }, /*#__PURE__*/React.createElement(Icon, { name: dir, size: 10, strokeWidth: 3 }),
+     `${sign}${pctPerRace.toFixed(1)}%`);
 }
 const MEDAL_COLOR = {
   1: "#fbbf24",
@@ -880,11 +946,28 @@ function TrendsTab({
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "chevronDown",
     size: 13
-  })))), display.map((name, idx) => {
+  })))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      fontSize: 10.5,
+      color: C.muted,
+      flexWrap: "wrap"
+    }
+  },
+    /*#__PURE__*/React.createElement("span", { style: { fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" } }, "Momentum"),
+    /*#__PURE__*/React.createElement(MomentumBadge, { momentum: { pctPerRace: 5, racesUsed: 0 } }),
+    /*#__PURE__*/React.createElement(MomentumBadge, { momentum: { pctPerRace: 0, racesUsed: 0 } }),
+    /*#__PURE__*/React.createElement(MomentumBadge, { momentum: { pctPerRace: -5, racesUsed: 0 } }),
+    /*#__PURE__*/React.createElement("span", null, `over last ${MOMENTUM_WINDOW} races, min ${MOMENTUM_MIN_RACES}`)
+  ), display.map((name, idx) => {
     const s = sorted.find(x => x.name === name);
     if (!s) return null;
     const tc = TYPE_COLOR[s.type] || C.accent;
     const scoresByRace = races.map(r => r.results.find(e => e.name === name)?.pts ?? null);
+    const chronological = scoresByRace.filter(v => v !== null);
+    const momentum = computeMomentum(chronological);
     return /*#__PURE__*/React.createElement("div", {
       key: name,
       className: "anim-slide",
@@ -906,7 +989,10 @@ function TrendsTab({
       style: {
         display: "flex",
         alignItems: "center",
-        gap: 8
+        gap: 8,
+        flexWrap: "wrap",
+        minWidth: 0,
+        rowGap: 4
       }
     }, /*#__PURE__*/React.createElement(UmaAvatar, {
       name: name,
@@ -916,10 +1002,16 @@ function TrendsTab({
       style: {
         fontWeight: 800,
         fontSize: 14,
-        color: C.text
+        color: C.text,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+        maxWidth: 150
       }
     }, name), /*#__PURE__*/React.createElement(Pill, {
       type: s.type
+    }), /*#__PURE__*/React.createElement(MomentumBadge, {
+      momentum: momentum
     })), /*#__PURE__*/React.createElement("div", {
       style: {
         textAlign: "right"
@@ -1805,7 +1897,8 @@ function IconPickerModal({ uma, manifest, manifestError, currentSlug, onSelect, 
     className: "anim-sheet",
     style: {
       background: C.surface, borderRadius: "18px 18px 0 0",
-      border: `1px solid ${C.border}`, maxHeight: "88vh",
+      border: `1px solid ${C.border}`,
+      maxHeight: "min(88vh, calc(88dvh - env(safe-area-inset-bottom)))",
       display: "flex", flexDirection: "column"
     }
   },
@@ -1898,7 +1991,10 @@ function IconPickerModal({ uma, manifest, manifestError, currentSlug, onSelect, 
       }))
     ),
     /*#__PURE__*/React.createElement("div", {
-      style: { padding: "12px 18px", borderTop: `1px solid ${C.border}`, flexShrink: 0 }
+      style: {
+        padding: "12px 18px calc(12px + env(safe-area-inset-bottom))",
+        borderTop: `1px solid ${C.border}`, flexShrink: 0
+      }
     },
       /*#__PURE__*/React.createElement("button", {
         onClick: onReset, className: "tap",
