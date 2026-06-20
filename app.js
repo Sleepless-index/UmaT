@@ -260,6 +260,55 @@ function Icon({
 }
 
 
+// ─── Uma Avatar ──────────────────────────────────────────────────────────────
+// Looks for icons/<Name_With_Underscores>.png next to the page.
+// Falls back to a styled letter badge using the type colour.
+function UmaAvatar({ name, type, size = 28 }) {
+  const [err, setErr] = useState(false);
+  const slug = name.replace(/\s+/g, '_');
+  const tc = TYPE_COLOR[type] || C.accent;
+  const initial = name.trim()[0]?.toUpperCase() || '?';
+  const borderRadius = Math.round(size * 0.28);
+
+  if (!err) {
+    return /*#__PURE__*/React.createElement("img", {
+      src: `icons/${slug}.png`,
+      alt: name,
+      onError: () => setErr(true),
+      style: {
+        width: size,
+        height: size,
+        borderRadius,
+        objectFit: "cover",
+        objectPosition: "top center",
+        flexShrink: 0,
+        border: `1.5px solid ${tc}55`,
+        background: C.faint,
+        display: "block"
+      }
+    });
+  }
+  // Letter fallback
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: size,
+      height: size,
+      borderRadius,
+      flexShrink: 0,
+      background: tc + "22",
+      border: `1.5px solid ${tc}55`,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: Math.round(size * 0.44),
+      fontWeight: 800,
+      color: tc,
+      letterSpacing: "-0.01em",
+      userSelect: "none"
+    }
+  }, initial);
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function uid() {
   return Math.random().toString(36).slice(2, 9);
@@ -610,7 +659,11 @@ function StandingsTab({
       }
     }, /*#__PURE__*/React.createElement(Medal, {
       pos: i + 1
-    })), /*#__PURE__*/React.createElement("div", {
+    })), /*#__PURE__*/React.createElement(UmaAvatar, {
+      name: s.name,
+      type: s.type,
+      size: 34
+    }), /*#__PURE__*/React.createElement("div", {
       style: {
         flex: 1,
         minWidth: 0
@@ -815,14 +868,10 @@ function TrendsTab({
         alignItems: "center",
         gap: 8
       }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        width: 8,
-        height: 8,
-        borderRadius: "50%",
-        background: tc,
-        boxShadow: `0 0 6px ${tc}`
-      }
+    }, /*#__PURE__*/React.createElement(UmaAvatar, {
+      name: name,
+      type: s.type,
+      size: 32
     }), /*#__PURE__*/React.createElement("span", {
       style: {
         fontWeight: 800,
@@ -1765,7 +1814,7 @@ function RaceViewModal({
       background: C.surface,
       borderRadius: "18px 18px 0 0",
       border: `1px solid ${C.border}`,
-      maxHeight: "88vh",
+      maxHeight: "min(88vh, calc(88dvh - env(safe-area-inset-bottom)))",
       display: "flex",
       flexDirection: "column"
     }
@@ -1847,7 +1896,11 @@ function RaceViewModal({
       }
     }, /*#__PURE__*/React.createElement(Medal, {
       pos: i + 1
-    })), /*#__PURE__*/React.createElement("div", {
+    })), /*#__PURE__*/React.createElement(UmaAvatar, {
+      name: e.name,
+      type: e.type,
+      size: 32
+    }), /*#__PURE__*/React.createElement("div", {
       style: {
         flex: 1,
         minWidth: 0
@@ -2086,7 +2139,7 @@ function BatchImportModal({
       background: C.surface,
       borderRadius: "18px 18px 0 0",
       border: `1px solid ${C.border}`,
-      maxHeight: "92vh",
+      maxHeight: "min(92vh, calc(92dvh - env(safe-area-inset-bottom)))",
       display: "flex",
       flexDirection: "column"
     }
@@ -2422,7 +2475,7 @@ function PasteModal({
       background: C.surface,
       borderRadius: "18px 18px 0 0",
       border: `1px solid ${C.border}`,
-      maxHeight: "92vh",
+      maxHeight: "min(92vh, calc(92dvh - env(safe-area-inset-bottom)))",
       display: "flex",
       flexDirection: "column"
     }
@@ -2579,7 +2632,11 @@ Long`), /*#__PURE__*/React.createElement("div", {
         fontWeight: 800,
         color: C.muted
       }
-    }, i + 1), /*#__PURE__*/React.createElement("span", {
+    }, i + 1), /*#__PURE__*/React.createElement(UmaAvatar, {
+      name: e.name,
+      type: e.type,
+      size: 26
+    }), /*#__PURE__*/React.createElement("span", {
       style: {
         flex: 1,
         fontSize: 13,
@@ -2837,7 +2894,7 @@ function RaceFormModal({
       background: C.surface,
       borderRadius: "18px 18px 0 0",
       border: `1px solid ${C.border}`,
-      maxHeight: "92vh",
+      maxHeight: "min(92vh, calc(92dvh - env(safe-area-inset-bottom)))",
       display: "flex",
       flexDirection: "column"
     }
@@ -3000,7 +3057,7 @@ function RaceFormModal({
   }), " Loss")))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "26px 1fr 92px 66px",
+      gridTemplateColumns: "26px 28px 1fr 92px 66px",
       gap: "4px 6px",
       fontSize: 9,
       color: C.muted,
@@ -3014,7 +3071,7 @@ function RaceFormModal({
     style: {
       textAlign: "center"
     }
-  }, "#"), /*#__PURE__*/React.createElement("span", null, "Name"), /*#__PURE__*/React.createElement("span", null, "Points"), /*#__PURE__*/React.createElement("span", null, "Type")), /*#__PURE__*/React.createElement("div", {
+  }, "#"), /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("span", null, "Name"), /*#__PURE__*/React.createElement("span", null, "Points"), /*#__PURE__*/React.createElement("span", null, "Type")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
@@ -3027,12 +3084,16 @@ function RaceFormModal({
       key: i,
       style: {
         display: "grid",
-        gridTemplateColumns: "26px 1fr 92px 66px",
+        gridTemplateColumns: "26px 28px 1fr 92px 66px",
         gap: "0 6px",
         alignItems: "center"
       }
     }, /*#__PURE__*/React.createElement(RankBadge, {
       rank: rank
+    }), /*#__PURE__*/React.createElement(UmaAvatar, {
+      name: row.name || `Uma ${i + 1}`,
+      type: row.type,
+      size: 26
     }), /*#__PURE__*/React.createElement("input", {
       value: row.name,
       onChange: e => updateRow(i, "name", e.target.value),
@@ -3168,7 +3229,7 @@ function SettingsModal({
       background: C.surface,
       borderRadius: "18px 18px 0 0",
       border: `1px solid ${C.border}`,
-      maxHeight: "88vh",
+      maxHeight: "min(88vh, calc(88dvh - env(safe-area-inset-bottom)))",
       display: "flex",
       flexDirection: "column"
     }
