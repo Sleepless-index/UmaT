@@ -261,18 +261,37 @@ function Icon({
 
 
 // ─── Uma Avatar ──────────────────────────────────────────────────────────────
-// Looks for icons/<Name_With_Underscores>.png next to the page.
-// Falls back to a styled letter badge using the type colour.
+// Name format: "T.M. Opera O" (base) or "T.M. Opera O [New Year, Same Radiance!]" (alt)
+// Slug: strip punctuation except spaces/brackets, split on bracket, join with "_".
+// T.M. Opera O                        → TM_Opera_O.webp
+// T.M. Opera O [New Year, Same Radiance!] → TM_Opera_O_New_Year_Same_Radiance.webp
+function umaSlug(name) {
+  const bracketMatch = name.match(/^([^\[]+)\[([^\]]+)\]/);
+  function sanitizePart(str) {
+    return str
+      .trim()
+      .replace(/[^a-zA-Z0-9\s]/g, '') // strip punctuation (dots, commas, !, apostrophes…)
+      .trim()
+      .replace(/\s+/g, '_');
+  }
+  if (bracketMatch) {
+    const base = sanitizePart(bracketMatch[1]);
+    const sub  = sanitizePart(bracketMatch[2]);
+    return `${base}_${sub}`;
+  }
+  return sanitizePart(name);
+}
+
 function UmaAvatar({ name, type, size = 28 }) {
   const [err, setErr] = useState(false);
-  const slug = name.replace(/\s+/g, '_');
+  const slug = umaSlug(name);
   const tc = TYPE_COLOR[type] || C.accent;
   const initial = name.trim()[0]?.toUpperCase() || '?';
   const borderRadius = Math.round(size * 0.28);
 
   if (!err) {
     return /*#__PURE__*/React.createElement("img", {
-      src: `icons/${slug}.png`,
+      src: `icons/${slug}.webp`,
       alt: name,
       onError: () => setErr(true),
       style: {
