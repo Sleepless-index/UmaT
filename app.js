@@ -776,28 +776,31 @@ function StandingsTab({
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 7,
-        marginBottom: 5
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
         fontWeight: 800,
         fontSize: 14,
         color: C.text,
         overflow: "hidden",
         textOverflow: "ellipsis",
-        whiteSpace: "nowrap"
-      }
-    }, s.name), /*#__PURE__*/React.createElement(Pill, {
-      type: s.type
-    })), /*#__PURE__*/React.createElement("div", {
+        whiteSpace: "nowrap",
+        marginBottom: 4
+      },
+      title: s.name
+    }, s.name), /*#__PURE__*/React.createElement("div", {
       style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 7
+      }
+    }, /*#__PURE__*/React.createElement(Pill, {
+      type: s.type
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
         height: 4,
         background: C.faint,
         borderRadius: 2,
-        overflow: "hidden"
+        overflow: "hidden",
+        minWidth: 24
       }
     }, /*#__PURE__*/React.createElement("div", {
       className: "bar-grow",
@@ -807,7 +810,7 @@ function StandingsTab({
         borderRadius: 2,
         background: `linear-gradient(90deg,${tc}99,${tc})`
       }
-    }))), /*#__PURE__*/React.createElement("div", {
+    })))), /*#__PURE__*/React.createElement("div", {
       style: {
         textAlign: "right",
         flexShrink: 0
@@ -1436,15 +1439,8 @@ function ProfileTab({
   races,
   stats,
   trialClass,
-  setTrialClass,
-  existingNames,
-  existingTypes,
-  roster,
-  onRosterChange,
-  iconManifest,
-  iconManifestError
+  setTrialClass
 }) {
-  const [pickerFor, setPickerFor] = useState(null); // uma name currently picking an icon for
   const wins = races.filter(r => r.outcome === "win").length;
   const losses = races.filter(r => r.outcome === "loss").length;
   const winRate = races.length ? wins / races.length : 0;
@@ -1464,11 +1460,6 @@ function ProfileTab({
   const mostConsistent = stats.filter(s => s.raceCount > 1).sort((a, b) => a.sigma - b.sigma)[0];
   const bestWinRate = [...stats].sort((a, b) => b.winRate - a.winRate)[0];
   const cls = CLASS_INFO[trialClass];
-  const umas = existingNames.map(name => ({
-    name,
-    type: existingTypes[name] || "Mile",
-    slug: roster[name] || umaSlug(name)
-  }));
   return /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -1794,84 +1785,7 @@ function ProfileTab({
       fontWeight: 800,
       color: "#34d399"
     }
-  }, (bestWinRate.winRate * 100).toFixed(0), "%")))),
-  // ─── Icon Roster ───────────────────────────────────────────────────────
-  /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: C.card,
-      border: `1px solid ${C.border}`,
-      borderRadius: 13,
-      padding: "14px"
-    }
-  },
-    /*#__PURE__*/React.createElement("div", {
-      style: { fontSize: 10, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }
-    }, "Icon Roster"),
-    /*#__PURE__*/React.createElement("div", {
-      style: { fontSize: 12, color: C.muted, lineHeight: 1.5, marginBottom: 12 }
-    }, iconManifestError
-      ? "Couldn't load icons/manifest.json — icons will fall back to initials until this is fixed."
-      : "Tap a character to assign an icon from icons/. Add new images to the icons/ folder and run update_icon_manifest.js to make them selectable here."
-    ),
-    umas.length === 0
-      ? /*#__PURE__*/React.createElement("div", {
-          style: { textAlign: "center", padding: "32px 12px" }
-        },
-          /*#__PURE__*/React.createElement("div", { style: { display: "flex", justifyContent: "center", marginBottom: 10, color: C.border2 } },
-            /*#__PURE__*/React.createElement(Icon, { name: "user", size: 36, strokeWidth: 1.5 })
-          ),
-          /*#__PURE__*/React.createElement("div", { style: { fontWeight: 700, color: C.muted, fontSize: 13 } }, "No umas yet"),
-          /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 4 } }, "Add races to see your roster")
-        )
-      : /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } },
-          umas.map(uma => /*#__PURE__*/React.createElement("button", {
-            key: uma.name,
-            onClick: () => setPickerFor(uma),
-            className: "tap row-hover",
-            style: {
-              background: C.faint, border: `1px solid ${C.border2}`,
-              borderRadius: 11, padding: "10px 12px",
-              display: "flex", alignItems: "center", gap: 12,
-              cursor: "pointer", width: "100%", textAlign: "left",
-              font: "inherit", color: "inherit"
-            }
-          },
-            /*#__PURE__*/React.createElement(UmaAvatar, { name: uma.name, type: uma.type, size: 40 }),
-            /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-              /*#__PURE__*/React.createElement("div", {
-                style: { fontWeight: 800, fontSize: 13.5, color: C.text, marginBottom: 2,
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }
-              }, uma.name),
-              /*#__PURE__*/React.createElement("div", {
-                style: { fontSize: 10.5, color: C.muted, fontFamily: "monospace",
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }
-              }, uma.slug, ".webp")
-            ),
-            /*#__PURE__*/React.createElement(Pill, { type: uma.type }),
-            /*#__PURE__*/React.createElement(Icon, { name: "chevronDown", size: 13, color: C.muted, style: { transform: "rotate(-90deg)", flexShrink: 0 } })
-          ))
-        )
-  ),
-  pickerFor && /*#__PURE__*/React.createElement(IconPickerModal, {
-    uma: pickerFor,
-    manifest: iconManifest,
-    manifestError: iconManifestError,
-    currentSlug: roster[pickerFor.name] || umaSlug(pickerFor.name),
-    onSelect: filename => {
-      const slug = filename.replace(/\.[^.]+$/, "");
-      clearBrokenIconSlug(slug);
-      onRosterChange({ ...roster, [pickerFor.name]: slug });
-      setPickerFor(null);
-    },
-    onReset: () => {
-      const next = { ...roster };
-      delete next[pickerFor.name];
-      onRosterChange(next);
-      setPickerFor(null);
-    },
-    onClose: () => setPickerFor(null)
-  })
-  );
+  }, (bestWinRate.winRate * 100).toFixed(0), "%")))));
 }
 
 // ─── Icon Picker Modal ──────────────────────────────────────────────────────
@@ -3396,13 +3310,171 @@ function RaceFormModal({
 }
 
 // ─── Settings Modal ─────────────────────────────────────────────────────────
+// ─── Icon Roster (Settings) ─────────────────────────────────────────────────
+// Redesigned roster manager, now living inside Settings instead of its own
+// card on the Profile tab. Collapsible (closed by default so Settings stays
+// short), with a search box since rosters can grow past what fits on screen.
+function IconRosterSection({ existingNames, existingTypes, roster, onRosterChange, iconManifest, iconManifestError }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [pickerFor, setPickerFor] = useState(null); // uma name currently picking an icon for
+
+  const umas = useMemo(() => existingNames.map(name => ({
+    name,
+    type: existingTypes[name] || "Mile",
+    slug: roster[name] || umaSlug(name),
+    customized: !!roster[name]
+  })), [existingNames, existingTypes, roster]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return umas;
+    return umas.filter(u => u.name.toLowerCase().includes(q));
+  }, [umas, query]);
+
+  const customCount = umas.filter(u => u.customized).length;
+
+  return /*#__PURE__*/React.createElement("div", null,
+    /*#__PURE__*/React.createElement("div", {
+      style: { fontSize: 10, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }
+    }, "Roster"),
+    /*#__PURE__*/React.createElement("div", {
+      style: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }
+    },
+      /*#__PURE__*/React.createElement("button", {
+        onClick: () => setOpen(o => !o),
+        className: "tap row-hover",
+        style: {
+          width: "100%", padding: "14px", display: "flex", alignItems: "center", gap: 12,
+          background: "transparent", border: "none", cursor: "pointer", textAlign: "left",
+          font: "inherit", color: "inherit"
+        }
+      },
+        /*#__PURE__*/React.createElement("div", {
+          style: {
+            width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+            background: C.accentLo, display: "flex", alignItems: "center", justifyContent: "center"
+          }
+        }, /*#__PURE__*/React.createElement(Icon, { name: "user", size: 17, color: C.accent })),
+        /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+          /*#__PURE__*/React.createElement("div", { style: { fontWeight: 800, fontSize: 14, color: C.text, marginBottom: 2 } }, "Icon Roster"),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 11.5, color: C.muted } },
+            umas.length === 0
+              ? "No umas yet"
+              : `${umas.length} character${umas.length !== 1 ? "s" : ""}${customCount ? `, ${customCount} customized` : ""}`
+          )
+        ),
+        /*#__PURE__*/React.createElement(Icon, {
+          name: "chevronDown", size: 15, color: C.muted, style: { flexShrink: 0, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }
+        })
+      ),
+      open && /*#__PURE__*/React.createElement("div", {
+        className: "anim-expand",
+        style: { borderTop: `1px solid ${C.border}`, padding: "12px 14px 14px" }
+      },
+        iconManifestError && /*#__PURE__*/React.createElement("div", {
+          style: {
+            background: "#450a0a33", border: "1px solid #ef444466", borderRadius: 8,
+            padding: "10px 12px", color: "#fca5a5", fontSize: 12, marginBottom: 12,
+            display: "flex", alignItems: "center", gap: 8
+          }
+        }, /*#__PURE__*/React.createElement(Icon, { name: "alertTriangle", size: 14, style: { flexShrink: 0 } }),
+           "Couldn't load icons/manifest.json — icons will fall back to initials until this is fixed."),
+        umas.length === 0
+          ? /*#__PURE__*/React.createElement("div", { style: { textAlign: "center", padding: "24px 12px" } },
+              /*#__PURE__*/React.createElement("div", { style: { display: "flex", justifyContent: "center", marginBottom: 10, color: C.border2 } },
+                /*#__PURE__*/React.createElement(Icon, { name: "user", size: 32, strokeWidth: 1.5 })
+              ),
+              /*#__PURE__*/React.createElement("div", { style: { fontWeight: 700, color: C.muted, fontSize: 13 } }, "No umas yet"),
+              /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 4 } }, "Add races to see your roster")
+            )
+          : /*#__PURE__*/React.createElement(React.Fragment, null,
+              umas.length > 6 && /*#__PURE__*/React.createElement("input", {
+                value: query,
+                onChange: e => setQuery(e.target.value),
+                placeholder: "Search roster…",
+                style: {
+                  width: "100%", background: C.faint, border: `1px solid ${C.border2}`,
+                  borderRadius: 9, padding: "9px 12px", color: C.text,
+                  fontSize: 13, outline: "none", boxSizing: "border-box", marginBottom: 10
+                }
+              }),
+              filtered.length === 0
+                ? /*#__PURE__*/React.createElement("div", {
+                    style: { textAlign: "center", padding: "16px 12px", color: C.muted, fontSize: 12.5 }
+                  }, "No matches for \"", query, "\"")
+                : /*#__PURE__*/React.createElement("div", {
+                    style: { display: "flex", flexDirection: "column", gap: 7, maxHeight: 360, overflow: "auto" }
+                  }, filtered.map(uma => /*#__PURE__*/React.createElement("button", {
+                      key: uma.name,
+                      onClick: () => setPickerFor(uma),
+                      className: "tap row-hover",
+                      style: {
+                        background: C.faint, border: `1px solid ${C.border2}`,
+                        borderRadius: 10, padding: "9px 10px",
+                        display: "flex", alignItems: "center", gap: 10,
+                        cursor: "pointer", width: "100%", textAlign: "left",
+                        font: "inherit", color: "inherit"
+                      }
+                    },
+                      /*#__PURE__*/React.createElement(UmaAvatar, { name: uma.name, type: uma.type, size: 36 }),
+                      /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+                        /*#__PURE__*/React.createElement("div", {
+                          style: { fontWeight: 800, fontSize: 13, color: C.text,
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+                          title: uma.name
+                        }, uma.name),
+                        /*#__PURE__*/React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 2 } },
+                          /*#__PURE__*/React.createElement(Pill, { type: uma.type }),
+                          uma.customized && /*#__PURE__*/React.createElement("span", {
+                            style: { fontSize: 10, color: C.accent, fontWeight: 700 }
+                          }, "custom icon")
+                        )
+                      ),
+                      /*#__PURE__*/React.createElement("span", {
+                        style: { fontSize: 11, color: C.muted, fontWeight: 700, flexShrink: 0 }
+                      }, "Change"),
+                      /*#__PURE__*/React.createElement(Icon, { name: "chevronDown", size: 13, color: C.muted, style: { transform: "rotate(-90deg)", flexShrink: 0 } })
+                    ))
+                  )
+            )
+      )
+    ),
+    pickerFor && /*#__PURE__*/React.createElement(IconPickerModal, {
+      uma: pickerFor,
+      manifest: iconManifest,
+      manifestError: iconManifestError,
+      currentSlug: roster[pickerFor.name] || umaSlug(pickerFor.name),
+      onSelect: filename => {
+        const slug = filename.replace(/\.[^.]+$/, "");
+        clearBrokenIconSlug(slug);
+        onRosterChange({ ...roster, [pickerFor.name]: slug });
+        setPickerFor(null);
+      },
+      onReset: () => {
+        const next = { ...roster };
+        delete next[pickerFor.name];
+        onRosterChange(next);
+        setPickerFor(null);
+      },
+      onClose: () => setPickerFor(null)
+    })
+  );
+}
+
 function SettingsModal({
   races,
   onClose,
   onExport,
   onImport,
   onClear,
-  onOpenBatchImport
+  onOpenBatchImport,
+  existingNames,
+  existingTypes,
+  roster,
+  onRosterChange,
+  iconManifest,
+  iconManifestError
 }) {
   const [status, setStatus] = useState(null); // {ok:bool, msg:string} | null
   const [confirmClear, setConfirmClear] = useState(false);
@@ -3547,7 +3619,14 @@ function SettingsModal({
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "upload",
     size: 15
-  }), " Batch Import Races"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }), " Batch Import Races"))), /*#__PURE__*/React.createElement(IconRosterSection, {
+    existingNames: existingNames,
+    existingTypes: existingTypes,
+    roster: roster,
+    onRosterChange: onRosterChange,
+    iconManifest: iconManifest,
+    iconManifestError: iconManifestError
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
       color: C.muted,
@@ -4067,13 +4146,7 @@ function App() {
     races: races,
     stats: stats,
     trialClass: trialClass,
-    setTrialClass: setTrialClass,
-    existingNames: existingNames,
-    existingTypes: existingTypes,
-    roster: roster,
-    onRosterChange: setRoster,
-    iconManifest: iconManifest,
-    iconManifestError: iconManifestError
+    setTrialClass: setTrialClass
   }))), /*#__PURE__*/React.createElement("div", {
     style: {
       position: "fixed",
@@ -4217,7 +4290,13 @@ function App() {
     onExport: exportData,
     onImport: importData,
     onClear: clearRaces,
-    onOpenBatchImport: () => setShowBatchImport(true)
+    onOpenBatchImport: () => setShowBatchImport(true),
+    existingNames: existingNames,
+    existingTypes: existingTypes,
+    roster: roster,
+    onRosterChange: setRoster,
+    iconManifest: iconManifest,
+    iconManifestError: iconManifestError
   }), showBatchImport && /*#__PURE__*/React.createElement(BatchImportModal, {
     existingNames: existingNames,
     existingTypes: existingTypes,
