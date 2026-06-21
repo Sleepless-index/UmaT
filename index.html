@@ -24,6 +24,40 @@
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
+<!--
+  No build step / bundler — everything below is a plain global-scope
+  script, same as the original single-file app.js. Load order matters:
+  data first, then small shared "atom" components, then composite
+  components that use those atoms, then app.js last.
+-->
+
+<!-- Data layer -->
+<script src="data/constants.js"></script>
+<script src="data/tracks.js"></script>
+<script src="data/stats.js"></script>
+
+<!-- Shared atoms -->
+<script src="components/Icon.js"></script>
+<script src="components/UmaAvatar.js"></script>
+<script src="components/Pill.js"></script>
+<script src="components/SortFilterDropdowns.js"></script>
+<script src="components/TrackPicker.js"></script>
+
+<!-- Race entry (round-based) -->
+<script src="components/RoundCard.js"></script>
+<script src="components/RaceFormModal.js"></script>
+
+<!-- Tabs -->
+<script src="components/StandingsTab.js"></script>
+<script src="components/TrendsTab.js"></script>
+<script src="components/RacesTab.js"></script>
+<script src="components/ProfileTab.js"></script>
+
+<!-- Modals -->
+<script src="components/RaceViewModal.js"></script>
+
+<!-- App shell + everything not yet split out (Settings, Icon Roster,
+     batch/paste import, icon picker) -->
 <script src="app.js"></script>
 </body>
 </html>
