@@ -11,11 +11,13 @@ function naturalFileSort(a, b) {
 }
 
 function BatchImportModal({ onApplyAll, onClose }) {
-  const [files, setFiles] = useState([]);
+  const [files, setFiles] = useState([]); // [{name, text}]
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState("");
+  // Per-file, per-round overrides (track fix / outcome), keyed by
+  // `${fileName}__${roundIndex}`.
   const [overrides, setOverrides] = useState({});
-  const [pickerFor, setPickerFor] = useState(null);
+  const [pickerFor, setPickerFor] = useState(null); // {fileName, roundIndex} | null
 
   const parsedFiles = useMemo(() => {
     return [...files].sort(naturalFileSort).map(f => {
@@ -56,7 +58,10 @@ function BatchImportModal({ onApplyAll, onClose }) {
 
   function handleFiles(fileList) {
     const incoming = Array.from(fileList).filter(f => /\.(md|txt)$/i.test(f.name));
-    if (!incoming.length) { setError("No .md or .txt files found"); return; }
+    if (!incoming.length) {
+      setError("No .md or .txt files found in your selection");
+      return;
+    }
     setError("");
     Promise.all(incoming.map(f => f.text().then(text => ({ name: f.name, text })))).then(results => {
       setFiles(prev => {
@@ -67,10 +72,13 @@ function BatchImportModal({ onApplyAll, onClose }) {
     });
   }
   function handleDrop(e) {
-    e.preventDefault(); setDragOver(false);
+    e.preventDefault();
+    setDragOver(false);
     if (e.dataTransfer?.files?.length) handleFiles(e.dataTransfer.files);
   }
-  function removeFile(name) { setFiles(prev => prev.filter(f => f.name !== name)); }
+  function removeFile(name) {
+    setFiles(prev => prev.filter(f => f.name !== name));
+  }
   function setRoundOverride(fileName, roundIndex, patch) {
     const key = `${fileName}__${roundIndex}`;
     setOverrides(prev => ({ ...prev, [key]: { ...prev[key], ...patch } }));
@@ -104,6 +112,7 @@ function BatchImportModal({ onApplyAll, onClose }) {
         style: { background: C.faint, border: "none", color: C.muted, borderRadius: 7, width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }
       }, /*#__PURE__*/React.createElement(Icon, { name: "x", size: 15 }))
     ),
+
     /*#__PURE__*/React.createElement("div", {
       style: { overflow: "auto", padding: "14px 18px", flex: 1, display: "flex", flexDirection: "column", gap: 14 }
     },
@@ -117,6 +126,7 @@ function BatchImportModal({ onApplyAll, onClose }) {
         /*#__PURE__*/React.createElement("code", { style: { fontFamily: "monospace" } }, "Dirt - Chukyo Dirt 1800m"),
         "). Then 3-line blocks: Name / Points / Lane keyword (Sprint, Mile, Medium, Long, Dirt)."
       ),
+
       /*#__PURE__*/React.createElement("div", {
         onDragOver: e => { e.preventDefault(); setDragOver(true); },
         onDragLeave: () => setDragOver(false),
@@ -135,6 +145,7 @@ function BatchImportModal({ onApplyAll, onClose }) {
           style: { display: "none" }
         }))
       ),
+
       files.length > 0 && /*#__PURE__*/React.createElement("div", { className: "anim-fade" },
         /*#__PURE__*/React.createElement("div", {
           style: { fontSize: 10, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }
@@ -161,7 +172,8 @@ function BatchImportModal({ onApplyAll, onClose }) {
             ),
             /*#__PURE__*/React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 7 } },
               f.rounds.map((round, ri) => /*#__PURE__*/React.createElement(ImportRoundPreview, {
-                key: ri, round,
+                key: ri,
+                round,
                 onTrackChange: () => {},
                 onOutcomeChange: outcome => setRoundOverride(f.fileName, ri, { outcome }),
                 onPickTrack: () => setPickerFor({ fileName: f.fileName, roundIndex: ri })
@@ -170,11 +182,13 @@ function BatchImportModal({ onApplyAll, onClose }) {
           ))
         )
       ),
+
       error && /*#__PURE__*/React.createElement("div", {
         className: "anim-fade",
         style: { background: "#450a0a33", border: "1px solid #ef444466", borderRadius: 8, padding: "10px 12px", color: "#fca5a5", fontSize: 13, display: "flex", alignItems: "center", gap: 8 }
       }, /*#__PURE__*/React.createElement(Icon, { name: "alertTriangle", size: 15, style: { flexShrink: 0 } }), error)
     ),
+
     /*#__PURE__*/React.createElement("div", { style: { padding: "14px 18px", borderTop: `1px solid ${C.border}`, flexShrink: 0 } },
       /*#__PURE__*/React.createElement("button", {
         onClick: handleApply, disabled: races.length === 0, className: "tap",
@@ -182,8 +196,7 @@ function BatchImportModal({ onApplyAll, onClose }) {
           width: "100%", padding: "13px", borderRadius: 11,
           background: races.length === 0 ? C.border2 : `linear-gradient(135deg,${C.accent},#8b5cf6)`,
           border: "none", color: races.length === 0 ? C.muted : "#fff", fontWeight: 800, fontSize: 15,
-          cursor: races.length === 0 ? "default" : "pointer",
-          boxShadow: races.length === 0 ? "none" : `0 4px 20px ${C.accent}44`, letterSpacing: "0.02em"
+          cursor: races.length === 0 ? "default" : "pointer", boxShadow: races.length === 0 ? "none" : `0 4px 20px ${C.accent}44`, letterSpacing: "0.02em"
         }
       }, races.length > 0 ? `Add ${races.length} Race${races.length !== 1 ? "s" : ""} to Tracker` : "Add Races to Tracker")
     )
