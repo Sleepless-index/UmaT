@@ -1,10 +1,7 @@
 // ─── Batch Import (multi-file drop, round/track aware) ─────────────────────
 // Each file represents one race (up to 5 rounds). A file's text can start
-// with a header section mapping short labels to tracks, or skip the header
-// and reference a track inline per entry — see data/importParse.js for the
-// exact format. Unmatched tracks get a manual TrackPickerModal fallback
-// right in the preview; outcome (win/loss) is always manual per round,
-// since pasted text never carries it.
+// with a header declaring which track each lane runs on, followed by
+// 3-line entry blocks (Name / Points / Lane keyword).
 
 function naturalFileSort(a, b) {
   const an = a.name.match(/(\d+)(?!.*\d)/);
@@ -123,9 +120,11 @@ function BatchImportModal({ onApplyAll, onClose }) {
         style: { background: C.faint, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "9px 12px", fontSize: 11.5, color: C.muted, lineHeight: 1.5 }
       },
         /*#__PURE__*/React.createElement("div", { style: { color: C.text, fontWeight: 700, marginBottom: 4 } }, "Drop one file per race (.md or .txt)"),
-        "Each file is a race. Optionally start with track labels (",
-        /*#__PURE__*/React.createElement("code", { style: { fontFamily: "monospace" } }, "Track A: Chukyo 1800m Dirt"),
-        "), then \"Name / Points / Label\" blocks per round. With only one track, you can skip the header and just put the track description as the 3rd line of each block."
+        "Header: one line per round as ",
+        /*#__PURE__*/React.createElement("code", { style: { fontFamily: "monospace" } }, "Lane - Track"),
+        " (e.g. ",
+        /*#__PURE__*/React.createElement("code", { style: { fontFamily: "monospace" } }, "Dirt - Chukyo Dirt 1800m"),
+        "). Then 3-line blocks: Name / Points / Lane keyword (Sprint, Mile, Medium, Long, Dirt)."
       ),
 
       /*#__PURE__*/React.createElement("div", {
