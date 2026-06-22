@@ -14,11 +14,11 @@ const C = {
   faint: "#1b1b21"
 };
 
-// Distance categories (Sprint/Mile/Medium/Long) — these come from the track
+// Team Trial lanes: Sprint/Mile/Medium/Long/Dirt. These come from the track
 // a round is run on, via TRACK_BY_ID / TRACKS_BY_TYPE in data/tracks.js.
-// "Dirt" used to live in this list as a leftover from when type conflated
-// distance category with surface; surface (Turf/Dirt) is now its own field
-// on the track itself, so it's been removed here.
+// Sprint/Mile/Medium/Long are Turf races at that distance; Dirt is its own
+// lane that's always Mile-distance, Dirt-surface — confirmed against how
+// Team Trials actually works, not a generic "distance category" anymore.
 const TYPE_COLOR = {
   Sprint: "#f472b6",
   // pink
@@ -26,15 +26,18 @@ const TYPE_COLOR = {
   // indigo
   Medium: "#34d399",
   // emerald
-  Long: "#38bdf8" // sky
+  Long: "#38bdf8",
+  // sky
+  Dirt: "#d97706" // amber, same hue as SURFACE_COLOR.Dirt below
 };
 const TYPE_GLOW = {
   Sprint: "#f472b622",
   Mile: "#818cf822",
   Medium: "#34d39922",
-  Long: "#38bdf822"
+  Long: "#38bdf822",
+  Dirt: "#d9770622"
 };
-const TYPES = ["Sprint", "Mile", "Medium", "Long"];
+const TYPES = ["Sprint", "Mile", "Medium", "Long", "Dirt"];
 
 // Surface colors, used wherever a track's surface (not distance type) needs
 // a visual treatment — e.g. the track picker, round summaries.
