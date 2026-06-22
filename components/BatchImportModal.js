@@ -10,10 +10,44 @@ function naturalFileSort(a, b) {
   return a.name.localeCompare(b.name);
 }
 
+// TSV export: rows = uma names, columns = one per race×lane in lane order.
+// Column header format: "Race1·Dirt", "Race1·Mile", etc.
+// Each uma appears in exactly one lane per race, so each row has at most
+// one non-empty cell per race-column-group.
+function buildTsvFromRaces(parsedFiles) {
+  const LANE_ORDER = ["Sprint", "Mile", "Medium", "Long", "Dirt"];
+  // Collect all column headers in file order, then lane order within each file.
+  const cols = []; // [{fileLabel, lane, roundRef}]
+  parsedFiles.forEach(f => {
+    const byLane = {};
+    f.rounds.forEach(r => { if (r.lane) byLane[r.lane] = r; });
+    LANE_ORDER.forEach(lane => {
+      if (byLane[lane]) cols.push({ fileLabel: f.fileName.replace(/\.[^.]+$/, ""), lane, round: byLane[lane] });
+    });
+  });
+  if (!cols.length) return "";
+
+  // Collect all unique uma names, preserving first-appearance order.
+  const nameSet = new Set();
+  cols.forEach(c => c.round.results.forEach(e => nameSet.add(e.name)));
+  const names = [...nameSet];
+
+  const header = cols.map(c => `${c.fileLabel}\u00b7${c.lane}`).join("\t");
+  const rows = names.map(name => {
+    const cells = cols.map(c => {
+      const hit = c.round.results.find(e => e.name === name);
+      return hit ? hit.pts.toLocaleString() : "";
+    });
+    return `${name}\t${cells.join("\t")}`;
+  });
+  return [header, ...rows].join("\n");
+}
+
 function BatchImportModal({ onApplyAll, onClose }) {
   const [files, setFiles] = useState([]); // [{name, text}]
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState("");
+  const [copyLabel, setCopyLabel] = useState("Copy TSV");
   // Per-file, per-round overrides (track fix / outcome), keyed by
   // `${fileName}__${roundIndex}`.
   const [overrides, setOverrides] = useState({});
@@ -53,6 +87,8 @@ function BatchImportModal({ onApplyAll, onClose }) {
       .filter(r => r.rounds.length > 0);
   }, [parsedFiles]);
 
+  const tsv = useMemo(() => parsedFiles.length ? buildTsvFromRaces(parsedFiles) : "", [parsedFiles]);
+
   const totalRounds = parsedFiles.reduce((s, f) => s + f.rounds.length, 0);
   const unmatchedCount = parsedFiles.reduce((s, f) => s + f.rounds.filter(r => !r.track).length, 0);
 
@@ -82,6 +118,16 @@ function BatchImportModal({ onApplyAll, onClose }) {
   function setRoundOverride(fileName, roundIndex, patch) {
     const key = `${fileName}__${roundIndex}`;
     setOverrides(prev => ({ ...prev, [key]: { ...prev[key], ...patch } }));
+  }
+  function copyTsv() {
+    if (!tsv) return;
+    navigator.clipboard?.writeText(tsv).then(() => {
+      setCopyLabel("Copied!");
+      setTimeout(() => setCopyLabel("Copy TSV"), 1500);
+    }).catch(() => {
+      setCopyLabel("Copy failed");
+      setTimeout(() => setCopyLabel("Copy TSV"), 1500);
+    });
   }
   function handleApply() {
     if (races.length === 0) {
@@ -181,6 +227,30 @@ function BatchImportModal({ onApplyAll, onClose }) {
             )
           ))
         )
+      ),
+
+      tsv && /*#__PURE__*/React.createElement("div", { className: "anim-fade" },
+        /*#__PURE__*/React.createElement("div", {
+          style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }
+        },
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" } }, "TSV \u2014 paste into Sheets"),
+          /*#__PURE__*/React.createElement("button", {
+            onClick: copyTsv, className: "tap",
+            style: { padding: "6px 12px", borderRadius: 7, background: C.faint, border: `1px solid ${C.border2}`, color: C.text, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }
+          }, copyLabel)
+        ),
+        /*#__PURE__*/React.createElement("textarea", {
+          readOnly: true,
+          value: tsv,
+          rows: 6,
+          onFocus: e => e.target.select(),
+          style: {
+            background: C.faint, border: `1px solid ${C.border2}`, borderRadius: 9,
+            color: C.text, padding: "10px 12px", fontSize: 11, outline: "none",
+            width: "100%", boxSizing: "border-box", resize: "vertical",
+            fontFamily: "monospace", lineHeight: 1.5
+          }
+        })
       ),
 
       error && /*#__PURE__*/React.createElement("div", {
