@@ -1,54 +1,68 @@
 // ─── Import text parsing (round/track aware) ───────────────────────────────
-// Replaces the old flat parsePasteText. A pasted block can optionally start
-// with a header section mapping short labels to tracks:
+// Format: a header section declaring which track each lane runs, followed
+// by 3-line entry blocks. Lane keywords are the same 5 Team Trial lanes:
+// Sprint, Mile, Medium, Long, Dirt.
 //
-//   Track A: Chukyo 1800m Dirt
-//   Track B: Hanshin 1400m Turf
+// Header (one line per round present in this race):
+//   Dirt - Chukyo Dirt 1800m
+//   Mile - Tokyo Turf 1800m
+//   Sprint - Hanshin Turf 1400m
+//   Medium - Hanshin Turf 2000m
+//   Long - Fukushima Turf 2600m
 //
-//   Maruzensky
-//   1331386 pts
-//   Track A
+// Entries (Name / Points / Lane, blank lines optional):
+//   Oguri Cap
+//   46,040 pts
+//   Dirt
 //
-//   Mejiro Ardan
-//   1224278 pts
-//   Track A
+//   Fuji Kiseki
+//   35,031 pts
+//   Mile
 //
-// The 3rd line of each entry block is the label from the header. If no
-// header is present, the 3rd line can instead be a track description
-// directly (handy for a single-round paste, where a label adds nothing) —
-// e.g. "Chukyo 1800m Dirt" right there in the block.
-//
-// Header lines are recognized as "<label>: <description>" where label has
-// no colon itself; this only kicks in before any blank-line-separated
-// entry blocks start, so "Track A:" inside what's clearly entry data won't
-// be misread (entry blocks are always exactly name / pts / track-ref).
+// Output: one round per lane keyword found, with entries grouped under it.
+// Lane keywords are unique per file — each of the 5 lanes appears at most
+// once, so there's never ambiguity about which round an entry belongs to.
+// Unrecognised track descriptions get track: null so the UI can surface a
+// manual picker rather than silently dropping the round.
+
+const LANE_KEYWORDS = ["Sprint", "Mile", "Medium", "Long", "Dirt"];
+
+function laneFromLine(line) {
+  return LANE_KEYWORDS.find(k => k.toLowerCase() === line.trim().toLowerCase()) || null;
+}
 
 function parseHeaderLine(line) {
-  const m = line.match(/^([^:]{1,20}):\s*(.+)$/);
+  // Matches "Lane - track description", e.g. "Dirt - Chukyo Dirt 1800m"
+  const m = line.match(/^(Sprint|Mile|Medium|Long|Dirt)\s*[-–]\s*(.+)$/i);
   if (!m) return null;
-  return { label: m[1].trim(), raw: m[2].trim() };
+  const lane = LANE_KEYWORDS.find(k => k.toLowerCase() === m[1].toLowerCase());
+  return { lane, raw: m[2].trim() };
 }
 
 function parseImportText(text) {
   const allLines = text.split("\n").map(l => l.trim());
-  const trackLabels = {}; // label -> { raw, matched }
 
-  // Consume leading header lines (label: description), skipping blank
-  // lines between them, until we hit something that isn't a header line.
+  // ── 1. Parse header ────────────────────────────────────────────────────
+  // Consume lines matching "Lane - description" at the top, skipping
+  // blanks, until we hit something that isn't a header line.
+  const laneMap = {}; // lane -> { raw, matched }
   let i = 0;
   while (i < allLines.length) {
     const line = allLines[i];
     if (line === "") { i++; continue; }
-    const header = parseHeaderLine(line);
-    if (!header) break;
-    trackLabels[header.label] = { raw: header.raw, matched: matchTrackText(header.raw) };
+    const h = parseHeaderLine(line);
+    if (!h) break;
+    laneMap[h.lane] = { raw: h.raw, matched: matchTrackText(h.raw) };
     i++;
   }
 
-  // Remaining lines are entry blocks: name / points / track-ref, optionally
-  // blank-line separated (same tolerant parsing as the old format).
+  // ── 2. Parse entry blocks ──────────────────────────────────────────────
+  // Each block is: name line / points line / lane keyword, optionally
+  // blank-line separated. We consume 3 lines per block; if the 3rd line
+  // isn't a lane keyword we skip forward by 1 to stay tolerant of extra
+  // blank lines or stray text.
   const lines = allLines.slice(i).filter(l => l.length > 0);
-  const entries = [];
+  const entries = []; // { name, pts, lane }
   let j = 0;
   while (j < lines.length) {
     const name = lines[j];
@@ -58,53 +72,44 @@ function parseImportText(text) {
     if (!ptsMatch) { j++; continue; }
     const pts = parseInt(ptsMatch[0]);
 
-    const refLine = lines[j + 2];
-    let label = null;
-    let consumed = 2;
-    if (refLine !== undefined) {
-      if (trackLabels[refLine]) {
-        // References a header label directly.
-        label = refLine;
-        consumed = 3;
-      } else {
-        // No header defined this label — try reading it as an inline
-        // track description (the no-header single-round shorthand).
-        const inline = matchTrackText(refLine);
-        if (inline) {
-          // Synthesize a label from the raw text so identical inline
-          // descriptions across entries group into the same round.
-          label = `__inline__${refLine}`;
-          if (!trackLabels[label]) trackLabels[label] = { raw: refLine, matched: inline };
-          consumed = 3;
-        }
-      }
-    }
-    entries.push({ name, pts, label });
-    j += consumed;
+    const laneLine = lines[j + 2];
+    const lane = laneLine ? laneFromLine(laneLine) : null;
+    entries.push({ name, pts, lane });
+    j += lane ? 3 : 2;
   }
 
-  // Group entries into rounds by label, in first-appearance order.
-  // Entries with no resolvable label (no header reference, no inline
-  // match) go into a final "Unassigned" bucket so nothing is silently
-  // dropped — the caller can surface these for manual fixing.
+  // ── 3. Group into rounds ───────────────────────────────────────────────
+  // Maintain first-appearance order of lanes across entries so the round
+  // list mirrors the natural writing order. Entries with no recognised
+  // lane go into a null bucket (shown as "unassigned" in the UI).
   const order = [];
-  const byLabel = {};
+  const byLane = {};
   entries.forEach(e => {
-    const key = e.label || "__unassigned__";
-    if (!byLabel[key]) { byLabel[key] = []; order.push(key); }
-    byLabel[key].push({ name: e.name, pts: e.pts });
+    const key = e.lane || "__unassigned__";
+    if (!byLane[key]) { byLane[key] = []; order.push(key); }
+    byLane[key].push({ name: e.name, pts: e.pts });
+  });
+
+  // Also include lanes declared in the header but with no entries yet
+  // (edge case: typo'd all entry lane refs). Append them at the end so
+  // the header declarations are always visible in the preview.
+  LANE_KEYWORDS.forEach(lane => {
+    if (laneMap[lane] && !byLane[lane]) {
+      byLane[lane] = [];
+      order.push(lane);
+    }
   });
 
   const rounds = order.map(key => {
-    const info = trackLabels[key];
+    const info = laneMap[key] || null;
     return {
-      label: key === "__unassigned__" ? null : (info ? (key.startsWith("__inline__") ? info.raw : key) : key),
+      lane: key === "__unassigned__" ? null : key,
       rawTrackText: info ? info.raw : null,
       track: info && info.matched ? info.matched.track.id : null,
       matchConfidence: info && info.matched ? info.matched.confidence : null,
-      results: byLabel[key]
+      results: byLane[key] || []
     };
   });
 
-  return { trackLabels, entries, rounds };
+  return { laneMap, entries, rounds };
 }
